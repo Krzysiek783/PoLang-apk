@@ -1,9 +1,9 @@
 import { View, Text } from 'react-native';
 
-export default function chatScreen() {
+export default function DashboardScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>📘 chat</Text>
+      <Text>🏠 Dashboard lessom</Text>
     </View>
   );
 }

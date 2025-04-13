@@ -1,9 +1,9 @@
+// app/home/profile.js
 import { View, Text } from 'react-native';
-
-export default function LessonsScreen() {
+export default function ProfileScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>📘 Lekcje</Text>
+      <Text>👤 Twó reset passy</Text>
     </View>
   );
 }

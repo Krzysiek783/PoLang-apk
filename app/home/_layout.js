@@ -1,48 +1,13 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+// app/home/_layout.js
 import { Drawer } from 'expo-router/drawer';
 
-
-export default function HomeLayout() {
+export default function HomeDrawerLayout() {
   return (
-    
-    <Tabs screenOptions={{ headerShown: false }}>
-      <Tabs.Screen
-        name="lessons"
-        options={{
-          title: 'Lekcje',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="stats"
-        options={{
-          title: 'Statystyki',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="stats-chart-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="leaderboard"
-        options={{
-          title: 'Ranking',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trophy-outline" size={size} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+    <Drawer>
+      <Drawer.Screen name="(tabs)" options={{ title: 'Menu główne' }} />
+      <Drawer.Screen name="profile" options={{ title: 'Profil' }} />
+      <Drawer.Screen name="password" options={{ title: 'Reset hasła' }} />
+      <Drawer.Screen name="logout" options={{ title: 'Wyloguj' }} />
+    </Drawer>
   );
 }

@@ -1,9 +1,9 @@
+// app/home/profile.js
 import { View, Text } from 'react-native';
-
-export default function leaderboardScreen() {
+export default function ProfileScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>📘 leaderboard</Text>
+      <Text>👤 Twój logout</Text>
     </View>
   );
 }

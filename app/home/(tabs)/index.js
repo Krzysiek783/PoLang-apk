@@ -1,9 +1,9 @@
 import { View, Text } from 'react-native';
 
-export default function statsScreen() {
+export default function DashboardScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>📘 Statystyki</Text>
+      <Text>🏠 Dashboard użytkownika</Text>
     </View>
   );
 }

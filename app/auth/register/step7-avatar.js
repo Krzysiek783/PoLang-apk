@@ -3,13 +3,14 @@ import { View, Text, Button, StyleSheet, Image, TouchableOpacity, Alert } from '
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
+// 🔹 Predefiniowane avatary – linki z Firebase Storage
 const predefinedAvatars = [
-  require('../../../assets/avatars/avatar1.png'),
-  require('../../../assets/avatars/avatar2.png'),
-  require('../../../assets/avatars/avatar3.png'),
-  require('../../../assets/avatars/avatar4.png'),
-  require('../../../assets/avatars/avatar5.png'),
-  require('../../../assets/avatars/avatar6.png'),
+  "https://firebasestorage.googleapis.com/v0/b/polang-app.firebasestorage.app/o/avatars%2Favatar1.png?alt=media",
+  // "https://firebasestorage.googleapis.com/v0/b/polang-app.firebasestorage.app/o/avatars%2Favatar2.png?alt=media",
+  // "https://firebasestorage.googleapis.com/v0/b/polang-app.firebasestorage.app/o/avatars%2Favatar1.png?alt=media",
+  // "https://firebasestorage.googleapis.com/v0/b/polang-app.firebasestorage.app/o/avatars%2Favatar1.png?alt=media",
+  // "https://firebasestorage.googleapis.com/v0/b/polang-app.firebasestorage.app/o/avatars%2Favatar1.png?alt=media",
+  // "https://firebasestorage.googleapis.com/v0/b/polang-app.firebasestorage.app/o/avatars%2Favatar1.png?alt=media",
 ];
 
 export default function Step7Avatar() {
@@ -32,6 +33,7 @@ export default function Step7Avatar() {
     });
 
     if (!result.canceled) {
+      // 📌 WAŻNE: teraz tylko zapisujemy URI
       setSelectedUri(result.assets[0].uri);
     }
   };
@@ -45,7 +47,7 @@ export default function Step7Avatar() {
       pathname: './confirm',
       params: {
         ...params,
-        avatarUri: selectedUri,
+        avatarUri: selectedUri, // ← lokalne URI albo gotowy URL z Firebase
       },
     });
   };
@@ -56,12 +58,12 @@ export default function Step7Avatar() {
 
       <View style={styles.avatarsRow}>
         {predefinedAvatars.map((img, idx) => (
-          <TouchableOpacity key={idx} onPress={() => setSelectedUri(Image.resolveAssetSource(img).uri)}>
+          <TouchableOpacity key={idx} onPress={() => setSelectedUri(img)}>
             <Image
-              source={img}
+              source={{ uri: img }}
               style={[
                 styles.avatar,
-                selectedUri === Image.resolveAssetSource(img).uri && styles.selected,
+                selectedUri === img && styles.selected,
               ]}
             />
           </TouchableOpacity>
@@ -93,6 +95,7 @@ const styles = StyleSheet.create({
   },
   avatarsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 15,
     marginBottom: 10,

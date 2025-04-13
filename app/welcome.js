@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Button } from 'react-native';
 import { Link } from 'expo-router';
 import { useEffect } from 'react';
-import { db,  } from '../src/config/firebase';
+import { db } from '../src/config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
 

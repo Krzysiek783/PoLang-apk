@@ -1,9 +1,9 @@
-// app/home/profile.js
 import { View, Text } from 'react-native';
-export default function ProfileScreen() {
+
+export default function DashboardScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>👤 Twój profil</Text>
+      <Text>🏠 Dashboard setting</Text>
     </View>
   );
 }
