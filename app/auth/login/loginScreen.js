@@ -95,7 +95,7 @@ export default function LoginScreen() {
       
       // jeśli nie firstLogin → przejdź dalej
       // ✅ Wszystko OK → przejście dalej
-      router.replace('../../home/homeScreen'); // Zmień ścieżkę według potrzeb
+      router.replace('../../home/(tabs)'); // Zmień ścieżkę według potrzeb
 
     } catch (err) {
       console.error("❌ Błąd logowania:", err.message);

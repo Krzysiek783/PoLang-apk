@@ -14,10 +14,10 @@ function AuthGate({ children }) {
 
     const isInAuthGroup = segments[0] === 'login' || segments[0] === 'register' || segments[0] === 'welcome';
 
-    if (!user && !isInAuthGroup) {
-      // 🔐 niezalogowany → przekieruj do /welcome
-      router.replace('/welcome');
-    } else if (user && isInAuthGroup) {
+    // if (!user && !isInAuthGroup) {
+    //   // 🔐 niezalogowany → przekieruj do /welcome
+    //   router.replace('/index');
+     if (user && isInAuthGroup) {
       // 🔓 zalogowany, a jest na login/welcome → idź do home
       router.replace('/home');
     }

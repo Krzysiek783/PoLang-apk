@@ -118,3 +118,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 });
+
+
+
+
+
+
+
+//https://firebasestorage.googleapis.com/v0/b/polang-app.firebasestorage.app/o/avatars%2Favatar1.png?alt=media
+//https://firebasestorage.googleapis.com/v0/b/polang-app.firebasestorage.app/o/avatars/avatar1.png?alt=media

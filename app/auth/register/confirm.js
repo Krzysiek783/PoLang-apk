@@ -30,7 +30,7 @@ export default function ConfirmScreen() {
         if (isLocal) {
           const uploadedUrl = await uploadAvatarFromUri(avatarUrl); // ← używamy params.avatarUri
           if (!uploadedUrl) throw new Error('Błąd przy przesyłaniu avatara');
-          avatarUrl = uploadedUrl;
+          avatarUri = uploadedUrl;
         }
 
         // 💾 Zapis danych do Firestore
@@ -42,7 +42,7 @@ export default function ConfirmScreen() {
           gender: params.gender,
           level: params.level,
           notifications: JSON.parse(params.notifications),
-          avatarUrl, // ← tu już gotowy publiczny link
+          avatarUri, // ← tu już gotowy publiczny link
           createdAt: new Date(),
           points: 0,
           verified: false,

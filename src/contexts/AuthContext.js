@@ -12,6 +12,7 @@ export const AuthProvider = ({ children }) => {
   
     useEffect(() => {
       const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        console.log('🧠 Firebase user:', firebaseUser); // <-- dodaj to
         setUser(firebaseUser);
         setLoading(false);
       });
