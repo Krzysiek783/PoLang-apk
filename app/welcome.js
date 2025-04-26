@@ -1,18 +1,25 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Link } from 'expo-router';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Link, useRouter } from 'expo-router';
 import { db } from '../src/config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign, MaterialIcons  } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useGoogleAuth } from '../src/config/googleAuth';
+
 
 export default function WelcomeScreen() {
   const [fontsLoaded] = useFonts({
     PoppinsBold: require('../assets/fonts/Poppins-Bold.ttf'),
     PoppinsRegular: require('../assets/fonts/Poppins-Regular.ttf'),
   });
+
+
+  const router = useRouter();
+  const { request, promptAsync, signInWithGoogle } = useGoogleAuth();
+
 
   useEffect(() => {
     const checkConnection = async () => {
@@ -57,6 +64,26 @@ export default function WelcomeScreen() {
             <Text style={styles.primaryButtonText}>Rozpocznij</Text>
           </TouchableOpacity>
         </Link>
+
+
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={() => {
+              promptAsync();
+            }}
+            activeOpacity={0.8}
+          >
+            <View style={styles.googleContent}>
+              <View style={styles.googleIconWrapper}>
+                <Image
+                  source={require('../assets/logo/google-logo1.png')} 
+                  style={styles.googleIcon}
+                  resizeMode="contain"
+                />
+              </View>
+              <Text style={styles.googleButtonText}>Rozpocznij z Google</Text>
+            </View>
+          </TouchableOpacity>
 
         <Text style={styles.or}>Lub</Text>
 
@@ -150,4 +177,37 @@ const styles = StyleSheet.create({
     fontFamily: 'PoppinsRegular',
     color: '#444',
   },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    
+  },
+  googleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  googleIconWrapper: {
+    backgroundColor: '#fff',
+    padding: 4,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  googleIcon: {
+    width: 24,
+    height: 24,
+  },
+  googleButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontFamily: 'PoppinsBold',
+  },
+  
 });

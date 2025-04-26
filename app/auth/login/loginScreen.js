@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Image
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
@@ -14,6 +15,8 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { syncVerificationWithFirestore } from '../../../src/services/syncVerification';
 import { useFonts } from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useGoogleAuth } from '../../../src/config/googleAuth';
+
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -21,6 +24,9 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const { promptAsync } = useGoogleAuth();
+
 
   const [fontsLoaded] = useFonts({
     Poppins: require('../../../assets/fonts/Poppins-Regular.ttf'),
@@ -130,6 +136,27 @@ export default function LoginScreen() {
           </Text>
         </TouchableOpacity>
 
+        <Text style={styles.or}>Lub</Text>
+
+        <TouchableOpacity
+        style={styles.googleButton}
+        onPress={() => promptAsync()}
+        activeOpacity={0.8}
+        >
+        <View style={styles.googleContent}>
+          <View style={styles.googleIconWrapper}>
+            <Image
+              source={require('../../../assets/logo/google-logo1.png')}
+              style={styles.googleIcon}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.googleButtonText}>Zaloguj się z Google</Text>
+        </View>
+        </TouchableOpacity>
+
+
+
         <Text style={styles.or}>Nie masz konta?</Text>
 
         <TouchableOpacity
@@ -204,4 +231,36 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'PoppinsBold',
   },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  googleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  googleIconWrapper: {
+    backgroundColor: '#fff',
+    padding: 4,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  googleIcon: {
+    width: 32,
+    height: 32,
+  },
+  googleButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontFamily: 'PoppinsBold',
+  },
+  
 });

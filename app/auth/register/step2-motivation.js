@@ -27,7 +27,11 @@ const reasons = [
 
 export default function Step2Motivation() {
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const { nick, email, password } = useLocalSearchParams();
+
+  console.log('Nick:', nick);
+  console.log('Email:', email);
+  console.log('Password:', password);
   const [selected, setSelected] = useState([]);
 
   const [fontsLoaded] = useFonts({
