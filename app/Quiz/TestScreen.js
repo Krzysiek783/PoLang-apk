@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Animated } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View, Text, TouchableOpacity, ActivityIndicator, Alert, Dimensions, StyleSheet
+} from 'react-native';
 import { API_BASE_URL } from '@env';
 import { router } from 'expo-router';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db, auth } from '../../src/config/firebase';
 import { Audio } from 'expo-av';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 
-const BASE_URL = API_BASE_URL;
+const { width } = Dimensions.get('window');
 
 export default function TestScreen() {
   const [questions, setQuestions] = useState([]);
@@ -15,8 +19,12 @@ export default function TestScreen() {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [feedbackColor, setFeedbackColor] = useState(new Animated.Value(0));
-  const [sound, setSound] = useState(null);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [optionKey, setOptionKey] = useState(0); // <--- KLUCZ do animacji opcji
+  const soundRef = useRef(null);
 
   const currentQ = questions[currentIndex];
 
@@ -24,7 +32,7 @@ export default function TestScreen() {
     const fetchTest = async () => {
       try {
         const token = await auth.currentUser.getIdToken();
-        const res = await fetch(`${BASE_URL}/api/test/start`, {
+        const res = await fetch(`${API_BASE_URL}/api/test/start`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -42,7 +50,7 @@ export default function TestScreen() {
 
   useEffect(() => {
     if (questions.length === 0 || timeLeft <= 0) return;
-  
+
     const timer = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
@@ -53,47 +61,25 @@ export default function TestScreen() {
         return t - 1;
       });
     }, 1000);
-  
+
     return () => clearInterval(timer);
   }, [questions.length, timeLeft]);
 
-
-  const formatTime = (t) => {
-    const min = Math.floor(t / 60);
-    const sec = t % 60;
-    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
-  };
-
   const handleSelect = (option) => {
     setSelected(option);
-
     const isCorrect = option === currentQ.correctAnswer;
-    if (isCorrect) {
-      setScore((s) => s + 1);
-      animateFeedback('#b6e2b3');
-    } else {
-      animateFeedback('#f7a4a4');
-    }
+    if (isCorrect) setScore((s) => s + 1);
 
     setTimeout(() => {
-      setFeedbackColor(new Animated.Value(0));
       if (currentIndex + 1 < questions.length) {
+        stopAudio();
         setCurrentIndex((i) => i + 1);
         setSelected(null);
+        setOptionKey(prev => prev + 1); // zmień klucz => animuj opcje
       } else {
         finishTest(false);
       }
-    }, 800);
-  };
-
-  const animateFeedback = (color) => {
-    Animated.timing(feedbackColor, {
-      toValue: 1,
-      duration: 200,
-      useNativeDriver: false,
-    }).start(() => {
-      feedbackColor.setValue(0);
-    });
+    }, 1000);
   };
 
   const finishTest = async (isTimeout) => {
@@ -119,109 +105,195 @@ export default function TestScreen() {
     }
   };
 
-  const playAudio = async (url) => {
+  const formatTime = (sec) => {
+    const min = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${min}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // AUDIO HANDLING
+  const toggleAudio = async () => {
+    if (isLoadingAudio) return;
+    setIsLoadingAudio(true);
+
     try {
-      if (sound) {
-        await sound.stopAsync();
-        await sound.unloadAsync();
+      if (soundRef.current) {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isPlaying) {
+          await soundRef.current.pauseAsync();
+          setIsPlaying(false);
+          return;
+        } else {
+          await soundRef.current.playAsync();
+          setIsPlaying(true);
+          return;
+        }
       }
-      const { sound: newSound } = await Audio.Sound.createAsync({ uri: url });
-      setSound(newSound);
-      await newSound.playAsync();
-    } catch (e) {
-      console.error('Błąd audio:', e);
+
+      if (currentQ.audioUrl) {
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: currentQ.audioUrl },
+          { shouldPlay: true }
+        );
+        soundRef.current = sound;
+        setIsPlaying(true);
+
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded) {
+            setPosition(status.positionMillis);
+            setDuration(status.durationMillis);
+            if (status.didJustFinish) setIsPlaying(false);
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Audio error:', err);
+    } finally {
+      setIsLoadingAudio(false);
     }
   };
 
+  const stopAudio = async () => {
+    if (soundRef.current) {
+      try {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded) {
+          await soundRef.current.stopAsync();
+          await soundRef.current.unloadAsync();
+        }
+      } catch (e) {
+        console.warn('⚠️ Audio stop error:', e);
+      } finally {
+        soundRef.current = null;
+        setIsPlaying(false);
+        setPosition(0);
+        setDuration(1);
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopAudio();
+    };
+  }, []);
+
   if (loading || !currentQ) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#6A5ACD" />
       </View>
     );
   }
 
-  const questionTypeLabel = {
-    flashcard: '🧠 Fiszka – przetłumacz słowo',
-    listening: '🎧 Słuchanie – odpowiedz na pytanie',
-    grammar: '📘 Gramatyka – uzupełnij zdanie',
-  };
-
   return (
-    <Animated.View style={{ flex: 1, padding: 24, backgroundColor: feedbackColor.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['#fff', selected === currentQ?.correctAnswer ? '#b6e2b3' : '#f7a4a4']
-    }) }}>
-      {/* Główny nagłówek i pasek czasu */}
-      <View style={{ marginBottom: 24 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-          <Text style={{ fontSize: 16 }}>⏳ Czas: {formatTime(timeLeft)}</Text>
-          <Text style={{ fontSize: 16 }}>
-            {currentIndex + 1} / {questions.length}
+    <LinearGradient colors={['#FFF9F5', '#FFE7D6']} style={styles.wrapper}>
+      <Animated.View entering={FadeInUp} style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.timer}>⏳ {formatTime(timeLeft)}</Text>
+          <Text style={styles.progress}>{currentIndex + 1}/{questions.length}</Text>
+        </View>
+
+        <View style={styles.progressBarWrapper}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${((currentIndex + 1) / questions.length) * 100}%` }]} />
+          </View>
+        </View>
+
+        {/* Question Type */}
+        <Animated.View entering={ZoomIn}>
+          <Text style={styles.type}>
+            {currentQ.type === 'flashcard' && '🧠 Fiszka – przetłumacz słowo'}
+            {currentQ.type === 'listening' && '🎧 Słuchanie – odpowiedz na pytanie'}
+            {currentQ.type === 'grammar' && '📘 Gramatyka – uzupełnij zdanie'}
           </Text>
-        </View>
-        <View style={{ height: 6, backgroundColor: '#ddd', borderRadius: 4 }}>
-          <View
-            style={{
-              height: 6,
-              width: `${((currentIndex + 1) / questions.length) * 100}%`,
-              backgroundColor: '#4CAF50',
-              borderRadius: 4,
-            }}
-          />
-        </View>
-      </View>
+        </Animated.View>
 
-      <Text style={{
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 10,
-        padding: 6,
-        backgroundColor: '#eee',
-        borderRadius: 8,
-        alignSelf: 'flex-start'
-      }}>
-        {questionTypeLabel[currentQ.type]}
-      </Text>
+        {/* Content */}
+        {currentQ.word && <Text style={styles.word}>{currentQ.word}</Text>}
+        {currentQ.sentence && <Text style={styles.sentence}>{currentQ.sentence}</Text>}
+        {currentQ.question && <Text style={styles.question}>❓ {currentQ.question}</Text>}
 
-      {currentQ.word && <Text style={{ fontSize: 28, textAlign: 'center', marginBottom: 30 }}>{currentQ.word}</Text>}
-      {currentQ.sentence && <Text style={{ fontSize: 22, textAlign: 'center', marginBottom: 30 }}>{currentQ.sentence}</Text>}
-      {currentQ.question && <Text style={{ fontSize: 20, marginBottom: 20 }}>{currentQ.question}</Text>}
-
-      {currentQ.audioUrl && (
-        <TouchableOpacity onPress={() => playAudio(currentQ.audioUrl)}>
-          <Text style={{ fontSize: 20, marginBottom: 20 }}>🔊 Odtwórz nagranie</Text>
-        </TouchableOpacity>
-      )}
-
-      {currentQ.options.map((option, index) => {
-        let bg = '#f0f0f0';
-        <Text style={{ fontSize: 16, color: 'red', marginTop: 20 }}>
-    Brak odpowiedzi – coś poszło nie tak 😓
-  </Text>
-        if (selected) {
-          if (option === currentQ.correctAnswer) bg = '#b6e2b3';
-          else if (option === selected) bg = '#f7a4a4';
-        }
-
-        return (
-          <TouchableOpacity
-            key={index}
-            disabled={!!selected}
-            onPress={() => handleSelect(option)}
-            style={{
-              backgroundColor: bg,
-              padding: 16,
-              borderRadius: 8,
-              marginBottom: 10,
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 18 }}>{option}</Text>
+        {/* AUDIO */}
+        {currentQ.audioUrl && (
+          <TouchableOpacity onPress={toggleAudio} style={styles.audioBtn}>
+            <Text style={styles.audioText}>
+              {isPlaying ? '⏸️ Pauza' : '▶️ Odtwórz nagranie'}
+            </Text>
+            <View style={styles.audioProgress}>
+              <View style={[styles.audioProgressBar, { width: `${(position / duration) * 100}%` }]} />
+            </View>
           </TouchableOpacity>
-        );
-      })}
-    </Animated.View>
+        )}
+
+        {/* OPTIONS */}
+        <View key={optionKey}>
+          {currentQ.options.map((option, index) => {
+            let bg = '#f4f4f4';
+            if (selected) {
+              if (option === currentQ.correctAnswer) bg = '#C8FACC';
+              else if (option === selected) bg = '#F9C0C0';
+            }
+
+            return (
+              <Animated.View entering={FadeInUp.delay(index * 100)} key={index}>
+                <TouchableOpacity
+                  disabled={!!selected}
+                  onPress={() => handleSelect(option)}
+                  style={[styles.option, { backgroundColor: bg }]}
+                >
+                  <Text style={styles.optionText}>{option}</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
+        </View>
+      </Animated.View>
+    </LinearGradient>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: { flex: 1 },
+  container: { padding: 24, paddingBottom: 40 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF9F5' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  timer: { fontSize: 16, fontWeight: 'bold', color: '#444' },
+  progress: { fontSize: 16, color: '#666' },
+  progressBarWrapper: { marginBottom: 20 },
+  progressBar: { height: 6, backgroundColor: '#ddd', borderRadius: 3 },
+  progressFill: { height: 6, backgroundColor: '#6A5ACD', borderRadius: 3 },
+  type: {
+    fontSize: 16,
+    fontWeight: '600',
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 20,
+    color: '#2E2E2E',
+    textAlign: 'center',
+  },
+  word: { fontSize: 28, textAlign: 'center', marginBottom: 10, color: '#2E2E2E', fontWeight: '600' },
+  sentence: { fontSize: 22, textAlign: 'center', marginBottom: 10, color: '#333' },
+  question: { fontSize: 18, textAlign: 'center', marginBottom: 20, color: '#222' },
+  audioBtn: {
+    backgroundColor: '#eee',
+    padding: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  audioText: { fontSize: 18, color: '#444', fontWeight: '600', marginBottom: 8 },
+  audioProgress: { height: 5, width: '100%', backgroundColor: '#ccc', borderRadius: 3 },
+  audioProgressBar: { height: 5, backgroundColor: '#6A5ACD', borderRadius: 3 },
+  option: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  optionText: { fontSize: 17, color: '#333', fontWeight: '500' },
+});

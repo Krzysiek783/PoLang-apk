@@ -1,11 +1,19 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../../../src/config/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { syncVerificationWithFirestore } from '../../../src/services/syncVerification';
-
+import { useFonts } from 'expo-font';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -13,12 +21,16 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  
+
+  const [fontsLoaded] = useFonts({
+    Poppins: require('../../../assets/fonts/Poppins-Regular.ttf'),
+    PoppinsBold: require('../../../assets/fonts/Poppins-Bold.ttf'),
+  });
+
+  if (!fontsLoaded) return null;
 
   const handleLogin = async () => {
     const cleanedEmail = email.trim().toLowerCase();
-
     if (!cleanedEmail || !password) {
       return Alert.alert('Błąd', 'Wprowadź email i hasło.');
     }
@@ -26,26 +38,15 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // 🔐 Logowanie
       await signInWithEmailAndPassword(auth, cleanedEmail, password);
-
-      // 🔁 Odśwież dane użytkownika
       await auth.currentUser.reload();
 
-      
-      
-      
-
-      // 🛡️ Sprawdzanie weryfikacji
       if (!auth.currentUser.emailVerified) {
         Alert.alert(
           "🔒 Nie potwierdzono adresu email",
           "Musisz kliknąć w link aktywacyjny wysłany na Twój adres email. Czy chcesz, żebym wysłał go ponownie?",
           [
-            {
-              text: "Anuluj",
-              style: "cancel"
-            },
+            { text: "Anuluj", style: "cancel" },
             {
               text: "Wyślij ponownie",
               onPress: async () => {
@@ -53,13 +54,8 @@ export default function LoginScreen() {
                   await sendEmailVerification(auth.currentUser);
                   Alert.alert("✅ Wysłano", "Nowy link został wysłany na Twój adres e-mail.");
                 } catch (sendErr) {
-                  console.error("❌ Błąd wysyłania:", sendErr.message);
-
                   if (sendErr.code === 'auth/too-many-requests') {
-                    Alert.alert(
-                      "Zbyt wiele prób",
-                      "Wysłano zbyt wiele wiadomości. Poczekaj kilka minut i spróbuj ponownie."
-                    );
+                    Alert.alert("Zbyt wiele prób", "Poczekaj kilka minut i spróbuj ponownie.");
                   } else {
                     Alert.alert("Błąd", "Nie udało się wysłać e-maila weryfikacyjnego.");
                   }
@@ -68,35 +64,25 @@ export default function LoginScreen() {
             }
           ]
         );
-
-        return; // zatrzymaj logowanie
+        return;
       }
 
-      await syncVerificationWithFirestore(); // 🔄 aktualizuje verified i verifiedAt
+      await syncVerificationWithFirestore();
 
-      
-
-      // ⬇️ TUTAJ WKLEJ KOD z onboardingiem:
       const uid = auth.currentUser.uid;
       const userRef = doc(db, 'users', uid);
       const snap = await getDoc(userRef);
 
       if (snap.exists()) {
         const userData = snap.data();
-
         if (userData.firstLogin) {
           await updateDoc(userRef, { firstLogin: false });
-          router.replace('/onboarding'); // 🔄 zmień jeśli chcesz
+          router.replace('/onboarding');
           return;
         }
       }
-      
-      
-      
-      // jeśli nie firstLogin → przejdź dalej
-      // ✅ Wszystko OK → przejście dalej
-      router.replace('../../home/(tabs)'); // Zmień ścieżkę według potrzeb
 
+      router.replace('../../home/(tabs)');
     } catch (err) {
       console.error("❌ Błąd logowania:", err.message);
       Alert.alert('Błąd', 'Nieprawidłowy email lub hasło.');
@@ -106,54 +92,116 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>🔐 Zaloguj się</Text>
+    <LinearGradient
+      colors={['#FDE3A7', '#F8B195', '#F67280']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0.3, y: 1 }}
+      style={styles.gradient}
+    >
+      <View style={styles.container}>
+        <Text style={styles.title}>🔐 Zaloguj się</Text>
 
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={styles.input}
-      />
+        <TextInput
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholderTextColor="#666"
+          style={styles.input}
+        />
 
-      <TextInput
-        placeholder="Hasło"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
+        <TextInput
+          placeholder="Hasło"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          placeholderTextColor="#666"
+          style={styles.input}
+        />
 
-      <Button
-        title={loading ? "Logowanie..." : "Zaloguj się"}
-        onPress={handleLogin}
-        disabled={loading}
-      />
-    </View>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          <Text style={styles.primaryButtonText}>
+            {loading ? 'Logowanie...' : 'Zaloguj się'}
+          </Text>
+        </TouchableOpacity>
+
+        <Text style={styles.or}>Nie masz konta?</Text>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => router.push('../register/step1-account')}
+        >
+          <Text style={styles.secondaryButtonText}>Zarejestruj się</Text>
+        </TouchableOpacity>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    padding: 30,
-    justifyContent: 'center',
-    gap: 15,
-    backgroundColor: '#fff',
+    paddingTop: 100,
+    paddingBottom: 40,
+    paddingHorizontal: 30,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 30,
+    fontSize: 32,
+    fontFamily: 'PoppinsBold',
     textAlign: 'center',
+    color: '#222',
+    marginBottom: 30,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     fontSize: 16,
+    fontFamily: 'Poppins',
+    marginBottom: 16,
+    color: '#000',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  primaryButton: {
+    backgroundColor: '#333',
+    paddingVertical: 16,
+    paddingHorizontal: 60,
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontFamily: 'PoppinsBold',
+  },
+  or: {
+    marginVertical: 10,
+    fontSize: 16,
+    fontFamily: 'PoppinsRegular',
+    color: '#444',
+  },
+  secondaryButton: {
+    backgroundColor: '#17D5FF',
+    paddingVertical: 16,
+    paddingHorizontal: 60,
+    borderRadius: 12,
+  },
+  secondaryButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontFamily: 'PoppinsBold',
   },
 });

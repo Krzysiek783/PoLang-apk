@@ -1,100 +1,85 @@
-import { View, Text, StyleSheet, Button } from 'react-native';
-import { Link } from 'expo-router';
-import { useEffect } from 'react';
-import { db } from '../src/config/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import React, { useEffect } from 'react';
+import { Text, Image, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+import { useAuth } from '../src/contexts/AuthContext';
+import { router } from 'expo-router';
 
+export default function SplashScreen() {
+  const { user } = useAuth();
 
-export default function WelcomeScreen() {
+  const logoOpacity = useSharedValue(0);
+  const textTranslateY = useSharedValue(30);
+  const textOpacity = useSharedValue(0);
 
   useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        await setDoc(doc(db, 'test', 'connectionCheck'), {
-          timestamp: new Date(),
-          message: 'Firestore działa 🚀',
-        });
-        console.log('✅ Połączono z Firestore (test zapisany)');
-      } catch (error) {
-        console.error('❌ Błąd połączenia z Firestore:', error.message);
-      }
-    };
-  
-    checkConnection();
-  }, []);
-  
+    // Animacje
+    logoOpacity.value = withTiming(1, { duration: 1000, easing: Easing.out(Easing.ease) });
+    textOpacity.value = withTiming(1, { duration: 1000, delay: 500, easing: Easing.out(Easing.ease) });
+    textTranslateY.value = withTiming(0, { duration: 1000, delay: 500, easing: Easing.out(Easing.ease) });
 
+    // Wymuszone 3 sekundy splash screenu
+    const splashTimeout = setTimeout(() => {
+      if (user) {
+        router.replace('/home');
+      } else {
+        router.replace('/welcome');
+      }
+    }, 3000); // minimum czas trwania splash-a
+
+    return () => clearTimeout(splashTimeout);
+  }, []);
+
+  const animatedLogoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+  }));
+
+  const animatedTextStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+    transform: [{ translateY: textTranslateY.value }],
+  }));
 
   return (
-
-    
-      
-    
-
-
-
-
-
-
-    <View style={styles.container}>
-      <Text style={styles.text}>👋 Witaj w PoLang – z Expo Routerem!</Text>
-
-
-      <Text style={styles.title}>👋 Witaj w PoLang!</Text>
-      <Text style={styles.subtitle}>Nauka angielskiego zaczyna się tutaj</Text>
-
-      <Link href="auth/login/loginScreen" asChild>
-        <Button title="Zaloguj się" />
-      </Link>
-
-      <Link href="auth/register/step1-account" asChild>
-        <Button title="Zarejestruj się" />
-      </Link>
-    </View>
+    <LinearGradient
+      colors={['#17D5FF', '#15BEE4', '#0E8099']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      locations={[0.19, 0.38, 1]}
+      style={styles.container}
+    >
+      <Animated.Image
+        source={require('../assets/logo/logo.png')}
+        style={[styles.logo, animatedLogoStyle]}
+        resizeMode="contain"
+      />
+      <Animated.Text style={[styles.text, animatedTextStyle]}>
+        Ucz się Angielskiego{'\n'}Na własnych Zasadach
+      </Animated.Text>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
-    backgroundColor: '#fff',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#777',
+  logo: {
+    width: 200,
+    height: 200,
     marginBottom: 30,
   },
   text: {
-    fontSize: 22,
+    color: '#FFF',
+    fontSize: 24,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,11 +1,18 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  Dimensions, ActivityIndicator, Alert
+} from 'react-native';
 import { Audio } from 'expo-av';
 import { auth, db } from '../../../src/config/firebase';
-import { router } from 'expo-router';
 import { doc, updateDoc, increment } from 'firebase/firestore';
+import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { API_BASE_URL } from '@env';
+import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
+const { width } = Dimensions.get('window');
 const BASE_URL = API_BASE_URL;
 
 export default function ListenScreen() {
@@ -22,16 +29,6 @@ export default function ListenScreen() {
   const [position, setPosition] = useState(0);
   const soundRef = useRef(null);
 
-  const toggleTranscript = () => setShowTranscript(prev => !prev);
-  const toggleTranslation = () => setShowTranslation(prev => !prev);
-
-  useEffect(() => {
-    console.log('▶️ Pokaż transkrypcję:', showTranscript);
-    console.log('🌍 Pokaż tłumaczenie:', showTranslation);
-  }, [showTranscript, showTranslation]);
-
-  const currentQ = lesson?.questions?.[currentIndex];
-
   useEffect(() => {
     const fetchLesson = async () => {
       try {
@@ -42,7 +39,7 @@ export default function ListenScreen() {
         const data = await res.json();
         setLesson(data);
       } catch (e) {
-        console.error('❌ Błąd pobierania lekcji:', e);
+        Alert.alert('Błąd', 'Nie udało się załadować lekcji.');
       } finally {
         setLoading(false);
       }
@@ -52,18 +49,13 @@ export default function ListenScreen() {
 
   const toggleAudio = async () => {
     if (sound) {
-      if (isPlaying) {
-        await sound.pauseAsync();
-        setIsPlaying(false);
-      } else {
-        await sound.playAsync();
-        setIsPlaying(true);
-      }
+      isPlaying ? await sound.pauseAsync() : await sound.playAsync();
+      setIsPlaying(!isPlaying);
     } else if (lesson?.audioUrl) {
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: lesson.audioUrl },
         {},
-        (status) => {
+        status => {
           if (status.isLoaded) {
             setDuration(status.durationMillis);
             setPosition(status.positionMillis);
@@ -71,10 +63,10 @@ export default function ListenScreen() {
         }
       );
 
-      newSound.setOnPlaybackStatusUpdate((status) => {
+      newSound.setOnPlaybackStatusUpdate(status => {
         if (status.isLoaded) {
-          setPosition(status.positionMillis);
           setDuration(status.durationMillis);
+          setPosition(status.positionMillis);
         }
       });
 
@@ -87,23 +79,43 @@ export default function ListenScreen() {
 
   useEffect(() => {
     return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
+      if (soundRef.current) soundRef.current.unloadAsync();
     };
   }, []);
 
   const formatTime = (ms) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
+    const total = Math.floor(ms / 1000);
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  const handleSelect = async (option) => {
+    setSelected(option);
+    const currentQ = lesson.questions[currentIndex];
+
+    if (option === currentQ.correctAnswer) {
+      setScore((prev) => prev + 1);
+      await Audio.Sound.createAsync(require('../../../assets/sounds/success.mp3')).then(s => s.sound.playAsync());
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      await Audio.Sound.createAsync(require('../../../assets/sounds/fail.mp3')).then(s => s.sound.playAsync());
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+
+    setTimeout(() => {
+      if (currentIndex + 1 < lesson.questions.length) {
+        setCurrentIndex((i) => i + 1);
+        setSelected(null);
+      } else {
+        finishLesson();
+      }
+    }, 1200);
   };
 
   const finishLesson = async () => {
     try {
-      const userRef = doc(db, 'users', auth.currentUser.uid);
-      await updateDoc(userRef, {
+      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
         points: increment(score),
       });
 
@@ -117,137 +129,161 @@ export default function ListenScreen() {
         },
       });
     } catch (e) {
-      console.error('Błąd przy zapisie punktów:', e);
       Alert.alert('Błąd', 'Nie udało się zapisać punktów.');
     }
   };
 
-  const handleSelect = (option) => {
-    setSelected(option);
-    if (option === currentQ.correctAnswer) setScore((s) => s + 1);
-    setTimeout(() => {
-      if (currentIndex + 1 < lesson.questions.length) {
-        setCurrentIndex((i) => i + 1);
-        setSelected(null);
-      } else {
-        finishLesson();
-      }
-    }, 1000);
-  };
-
   if (loading || !lesson) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#F67280" />
+        <Text style={{ marginTop: 10 }}>Ładowanie lekcji...</Text>
       </View>
     );
   }
 
+  const currentQ = lesson.questions[currentIndex];
+
   return (
-    <ScrollView contentContainerStyle={{ padding: 20 }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>{lesson.title}</Text>
+    <LinearGradient colors={['#FFF9F5', '#FFE7D6']} style={styles.wrapper}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>{lesson.title}</Text>
 
-      <TouchableOpacity
-        onPress={toggleAudio}
-        style={{ backgroundColor: '#ccc', padding: 14, borderRadius: 12, marginBottom: 10 }}>
-        <Text style={{ fontSize: 18 }}>{isPlaying ? '⏸️ Pauza' : '▶️ Odtwórz nagranie'}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.audioButton} onPress={toggleAudio}>
+          <Text style={styles.audioText}>
+            {isPlaying ? '⏸️ Pauza' : '▶️ Odtwórz nagranie'}
+          </Text>
+        </TouchableOpacity>
 
-      {duration > 0 && (
-        <View style={{ marginBottom: 20 }}>
-          <View style={{ height: 4, backgroundColor: '#ddd', borderRadius: 2 }}>
-            <View
-              style={{
-                height: 4,
-                width: `${(position / duration) * 100}%`,
-                backgroundColor: '#007AFF',
-              }}
-            />
+        <View style={styles.progressWrapper}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${(position / duration) * 100}%` }]} />
           </View>
-          <Text style={{ fontSize: 12, textAlign: 'right', marginTop: 4 }}>
+          <Text style={styles.time}>
             {formatTime(position)} / {formatTime(duration)}
           </Text>
         </View>
-      )}
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
-  <TouchableOpacity
-    onPress={() => {
-      console.log("Kliknięto transkrypcję");
-      toggleTranscript();
-    }}
-    style={{
-      backgroundColor: '#eee',
-      padding: 10,
-      borderRadius: 8,
-      flex: 1,
-      marginRight: 5,
-      alignItems: 'center',
-    }}
-  >
-    <Text style={{ color: '#007AFF', fontSize: 16 }}>
-      📜 {showTranscript ? 'Ukryj transkrypcję' : 'Pokaż transkrypcję'}
-    </Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity
-    onPress={() => {
-      console.log("Kliknięto tłumaczenie");
-      toggleTranslation();
-    }}
-    style={{
-      backgroundColor: '#eee',
-      padding: 10,
-      borderRadius: 8,
-      flex: 1,
-      marginLeft: 5,
-      alignItems: 'center',
-    }}
-  >
-    <Text style={{ color: '#007AFF', fontSize: 16 }}>
-      🌐 {showTranslation ? 'Ukryj tłumaczenie' : 'Pokaż tłumaczenie'}
-    </Text>
-  </TouchableOpacity>
-</View>
-
-
-      {showTranscript && lesson.transcript && (
-        <View style={{ marginBottom: 20 }}>
-          <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>📜 Transkrypcja</Text>
-          {lesson.transcript.map((line, index) => (
-            <Text key={index} style={{ fontSize: 16, marginBottom: 4 }}>{line}</Text>
-          ))}
+        <View style={styles.buttonRow}>
+          <Animated.View entering={ZoomIn}>
+            <TouchableOpacity style={styles.toggleBtn} onPress={() => setShowTranscript(p => !p)}>
+              <Text style={styles.toggleText}>
+                📜 {showTranscript ? 'Ukryj transkrypcję' : 'Pokaż transkrypcję'}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+          <Animated.View entering={ZoomIn.delay(100)}>
+            <TouchableOpacity style={styles.toggleBtn} onPress={() => setShowTranslation(p => !p)}>
+              <Text style={styles.toggleText}>
+                🌍 {showTranslation ? 'Ukryj tłumaczenie' : 'Pokaż tłumaczenie'}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
-      )}
 
-      {showTranslation && lesson.translation && (
-        <View style={{ marginBottom: 20 }}>
-          <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>🌐 Tłumaczenie</Text>
-          {lesson.translation.map((line, index) => (
-            <Text key={index} style={{ fontSize: 16, color: '#666', marginBottom: 4 }}>{line}</Text>
-          ))}
-        </View>
-      )}
+        {showTranscript && (
+          <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.box}>
+            {lesson.transcript.map((line, i) => (
+              <Text key={i} style={styles.textLine}>{line}</Text>
+            ))}
+          </Animated.View>
+        )}
 
-      <Text style={{ fontSize: 16, marginBottom: 10 }}>❓ {currentQ.question}</Text>
-      {currentQ.options.map((option, i) => {
-        let bg = '#f0f0f0';
-        if (selected) {
-          if (option === currentQ.correctAnswer) bg = '#b6e2b3';
-          else if (option === selected) bg = '#f7a4a4';
-        }
-        return (
-          <TouchableOpacity
-            key={i}
-            disabled={!!selected}
-            onPress={() => handleSelect(option)}
-            style={{ backgroundColor: bg, padding: 14, borderRadius: 8, marginBottom: 10 }}>
-            <Text>{option}</Text>
-          </TouchableOpacity>
-        );
-      })}
+        {showTranslation && (
+          <Animated.View entering={FadeIn.delay(100)} exiting={FadeOut} style={styles.box}>
+            {lesson.translation.map((line, i) => (
+              <Text key={i} style={styles.translationLine}>{line}</Text>
+            ))}
+          </Animated.View>
+        )}
 
-      <Text style={{ marginTop: 20 }}>Pytanie {currentIndex + 1} / {lesson.questions.length} | 🎯 Wynik: {score}</Text>
-    </ScrollView>
+        <Text style={styles.question}>❓ {currentQ.question}</Text>
+        {currentQ.options.map((opt, i) => {
+          let bg = '#f0f0f0';
+          if (selected) {
+            if (opt === currentQ.correctAnswer) bg = '#B9FBC0';
+            else if (opt === selected) bg = '#FBC4AB';
+          }
+
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => handleSelect(opt)}
+              disabled={!!selected}
+              style={[styles.answerBtn, { backgroundColor: bg }]}
+            >
+              <Text style={styles.answerText}>{opt}</Text>
+            </TouchableOpacity>
+          );
+        })}
+
+        <Text style={styles.progressInfo}>
+          📈 Pytanie {currentIndex + 1}/{lesson.questions.length} | 🎯 Wynik: {score}
+        </Text>
+      </ScrollView>
+    </LinearGradient>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: { flex: 1 },
+  container: { padding: 24, paddingBottom: 60 },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFF9F5',
+  },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, color: '#2E2E2E' },
+  audioButton: {
+    backgroundColor: '#D6D6FF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  audioText: { fontSize: 18, color: '#2E2E2E', fontWeight: '600' },
+  progressWrapper: { marginBottom: 20 },
+  progressBar: { height: 6, backgroundColor: '#ddd', borderRadius: 3 },
+  progressFill: { height: 6, backgroundColor: '#6A5ACD', borderRadius: 3 },
+  time: { fontSize: 12, marginTop: 4, textAlign: 'right', color: '#555' },
+  buttonRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  toggleBtn: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  toggleText: { fontSize: 14, fontWeight: '500', color: '#444' },
+  box: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  textLine: { fontSize: 16, marginBottom: 6 },
+  translationLine: { fontSize: 16, marginBottom: 6, color: '#666' },
+  question: { fontSize: 18, marginBottom: 14, color: '#222' },
+  answerBtn: {
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  answerText: { fontSize: 16, color: '#2E2E2E' },
+  progressInfo: {
+    marginTop: 20,
+    textAlign: 'center',
+    color: '#333',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+});
