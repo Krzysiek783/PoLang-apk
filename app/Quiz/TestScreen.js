@@ -23,8 +23,11 @@ export default function TestScreen() {
   const [duration, setDuration] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const [optionKey, setOptionKey] = useState(0); // <--- KLUCZ do animacji opcji
+  const [optionKey, setOptionKey] = useState(0);
   const soundRef = useRef(null);
+
+  const correctSoundRef = useRef(null);
+  const wrongSoundRef = useRef(null);
 
   const currentQ = questions[currentIndex];
 
@@ -65,9 +68,37 @@ export default function TestScreen() {
     return () => clearInterval(timer);
   }, [questions.length, timeLeft]);
 
+  useEffect(() => {
+    const loadFeedbackSounds = async () => {
+      try {
+        const { sound: correctSound } = await Audio.Sound.createAsync(
+          require('../../assets/sounds/success.mp3')
+        );
+        correctSoundRef.current = correctSound;
+
+        const { sound: wrongSound } = await Audio.Sound.createAsync(
+          require('../../assets/sounds/fail.mp3')
+        );
+        wrongSoundRef.current = wrongSound;
+      } catch (e) {
+        console.warn('⚠️ Failed to load feedback sounds', e);
+      }
+    };
+
+    loadFeedbackSounds();
+
+    return () => {
+      correctSoundRef.current?.unloadAsync();
+      wrongSoundRef.current?.unloadAsync();
+      stopAudio();
+    };
+  }, []);
+
   const handleSelect = (option) => {
     setSelected(option);
     const isCorrect = option === currentQ.correctAnswer;
+    playFeedbackSound(isCorrect);
+
     if (isCorrect) setScore((s) => s + 1);
 
     setTimeout(() => {
@@ -75,11 +106,22 @@ export default function TestScreen() {
         stopAudio();
         setCurrentIndex((i) => i + 1);
         setSelected(null);
-        setOptionKey(prev => prev + 1); // zmień klucz => animuj opcje
+        setOptionKey(prev => prev + 1);
       } else {
         finishTest(false);
       }
     }, 1000);
+  };
+
+  const playFeedbackSound = async (isCorrect) => {
+    try {
+      const sound = isCorrect ? correctSoundRef.current : wrongSoundRef.current;
+      if (sound) {
+        await sound.replayAsync();
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to play feedback sound', e);
+    }
   };
 
   const finishTest = async (isTimeout) => {
@@ -111,7 +153,6 @@ export default function TestScreen() {
     return `${min}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // AUDIO HANDLING
   const toggleAudio = async () => {
     if (isLoadingAudio) return;
     setIsLoadingAudio(true);
@@ -171,12 +212,6 @@ export default function TestScreen() {
       }
     }
   };
-
-  useEffect(() => {
-    return () => {
-      stopAudio();
-    };
-  }, []);
 
   if (loading || !currentQ) {
     return (
