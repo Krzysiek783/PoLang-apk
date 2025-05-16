@@ -57,9 +57,11 @@ export default function Step2Motivation() {
     router.push({
       pathname: './step3-age',
       params: {
-        ...params,
-        motivations: JSON.stringify(selected),
-      },
+      nick,
+      email,
+      password,
+      motivations: JSON.stringify(selected),
+},
     });
   };
 

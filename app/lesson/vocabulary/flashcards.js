@@ -79,10 +79,19 @@ export default function FlashcardsScreen() {
     }, 800);
   };
 
-  const finishLesson = async () => {
+    const finishLesson = async () => {
     try {
-      const userRef = doc(db, 'users', auth.currentUser.uid);
+      const uid = auth.currentUser.uid;
+
+      // Zwiększamy punkty w kolekcji users
+      const userRef = doc(db, 'users', uid);
       await updateDoc(userRef, { points: increment(score) });
+
+      // Zwiększamy Vocabulary w kolekcji userProgress
+      const progressRef = doc(db, 'userProgress', uid);
+      await updateDoc(progressRef, {
+        'Stats.Vocabulary': increment(1)
+      });
 
       router.replace({
         pathname: '/lesson/summaryScreen',
@@ -93,7 +102,8 @@ export default function FlashcardsScreen() {
           type: 'flashcards',
         },
       });
-    } catch {
+    } catch (error) {
+      console.error('Błąd aktualizacji:', error);
       Alert.alert('Błąd', 'Nie udało się zapisać punktów.');
     }
   };

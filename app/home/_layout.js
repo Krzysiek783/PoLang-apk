@@ -51,6 +51,9 @@ export default function HomeDrawerLayout() {
         <Drawer.Screen name="profile" options={{ title: 'Profil' }} />
         <Drawer.Screen name="password" options={{ title: 'Reset hasła' }} />
         <Drawer.Screen name="logout" options={{ title: 'Wyloguj' }} />
+        <Drawer.Screen  name="(tabs)"   options={{drawerItemStyle: { display: 'none' },   }}/> // ukrywa z drawer  
+     
+
       </Drawer>
     </View>
   );

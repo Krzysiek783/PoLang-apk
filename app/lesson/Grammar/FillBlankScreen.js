@@ -82,10 +82,19 @@ export default function FillBlankScreen() {
     }
   };
 
-  const finishLesson = async () => {
+    const finishLesson = async () => {
     try {
-      const userRef = doc(db, 'users', auth.currentUser.uid);
+      const uid = auth.currentUser.uid;
+
+      // Zwiększamy punkty
+      const userRef = doc(db, 'users', uid);
       await updateDoc(userRef, { points: increment(score) });
+
+      // Zwiększamy Grammar w kolekcji userProgress
+      const progressRef = doc(db, 'userProgress', uid);
+      await updateDoc(progressRef, {
+        'Stats.Grammar': increment(1)
+      });
 
       router.replace({
         pathname: '/lesson/summaryScreen',
@@ -97,6 +106,7 @@ export default function FillBlankScreen() {
         },
       });
     } catch (e) {
+      console.error(e);
       Alert.alert('❌ Błąd', 'Nie udało się zapisać punktów.');
     }
   };

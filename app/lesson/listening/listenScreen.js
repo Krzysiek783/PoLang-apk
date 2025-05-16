@@ -113,10 +113,19 @@ export default function ListenScreen() {
     }, 1200);
   };
 
-  const finishLesson = async () => {
+    const finishLesson = async () => {
     try {
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+      const uid = auth.currentUser.uid; // ← dodaj to!
+
+      // Zwiększamy punkty
+      await updateDoc(doc(db, 'users', uid), {
         points: increment(score),
+      });
+
+      // Zwiększamy Listening w Stats
+      const progressRef = doc(db, 'userProgress', uid);
+      await updateDoc(progressRef, {
+        'Stats.Listening': increment(1),
       });
 
       router.replace({
@@ -129,6 +138,7 @@ export default function ListenScreen() {
         },
       });
     } catch (e) {
+      console.error(e);
       Alert.alert('Błąd', 'Nie udało się zapisać punktów.');
     }
   };

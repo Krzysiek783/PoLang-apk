@@ -2,6 +2,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
+import NotificationManager from '../src/components/NotificationManager';
+
 
 // function AuthGate({ children }) {
 //   const { user, loading } = useAuth();
@@ -43,7 +45,8 @@ import { ActivityIndicator, View } from 'react-native';
 export default function RootLayout() {
   return (
     <AuthProvider>
-     
+           <NotificationManager />
+           
       <Stack
         screenOptions={{ headerShown: false }}
       />

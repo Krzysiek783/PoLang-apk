@@ -79,7 +79,7 @@ export default function LeaderboardScreen() {
         <View>
           <Text style={styles.nick}>{item.nick}</Text>
           <Text style={styles.meta}>📘 {item.level} | 🏆 {item.points} pkt</Text>
-          <Text style={styles.statuses}>🔥 {item.streak} dni • 🎯 XP+ • 📘 Grammar</Text>
+          
         </View>
       </TouchableOpacity>
     );

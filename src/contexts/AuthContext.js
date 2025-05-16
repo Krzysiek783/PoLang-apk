@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth'; // ⬅️ na górze pliku
+
 
 
 const AuthContext = createContext();
@@ -21,9 +23,18 @@ export const AuthProvider = ({ children }) => {
     }, []);
   
     const logout = () => signOut(auth);
+
+    const resetPassword = async (email) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  };
   
     return (
-      <AuthContext.Provider value={{ user, loading, logout }}>
+      <AuthContext.Provider value={{ user, loading, logout, resetPassword  }}>
         {children}
       </AuthContext.Provider>
     );

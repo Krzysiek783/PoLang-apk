@@ -11,11 +11,15 @@ import {
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../../../src/config/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { syncVerificationWithFirestore } from '../../../src/services/syncVerification';
 import { useFonts } from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGoogleAuth } from '../../../src/config/googleAuth';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import Modal from 'react-native-modal';
+
+
 
 
 export default function LoginScreen() {
@@ -24,6 +28,8 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [noAccountModalVisible, setNoAccountModalVisible] = useState(false);
+
 
   const { promptAsync } = useGoogleAuth();
 
@@ -34,6 +40,52 @@ export default function LoginScreen() {
   });
 
   if (!fontsLoaded) return null;
+
+
+  const doesEmailExist = async (email) => {
+  const cleanedEmail = email.trim().toLowerCase();
+  const q = query(collection(db, 'users'), where('email', '==', cleanedEmail));
+  const snapshot = await getDocs(q);
+  return !snapshot.empty; // true jeśli konto istnieje
+  };
+
+
+
+ const handleResetPassword = async () => {
+  const cleanedEmail = email.trim().toLowerCase();
+  if (!cleanedEmail) {
+    return Alert.alert('Błąd', 'Wpisz swój adres e-mail, aby zresetować hasło.');
+  }
+
+  const exists = await doesEmailExist(cleanedEmail);
+  if (!exists) {
+    return setNoAccountModalVisible(true);
+
+  }
+
+  Alert.alert(
+    "🔐 Resetowanie hasła",
+    `Na adres: \n\n${cleanedEmail}\n\nzostanie wysłany link do zmiany hasła. Kontynuować?`,
+    [
+      { text: "Anuluj", style: "cancel" },
+      {
+        text: "Wyślij link",
+        onPress: async () => {
+          try {
+            await sendPasswordResetEmail(auth, cleanedEmail);
+            Alert.alert(
+              "📩 Sprawdź skrzynkę",
+              `Wysłaliśmy wiadomość z linkiem resetującym hasło na:\n\n${cleanedEmail}`
+            );
+          } catch (err) {
+            console.error("❌ Błąd resetowania hasła:", err.code);
+            Alert.alert("Błąd", "Nie udało się wysłać linku. Spróbuj ponownie później.");
+          }
+        }
+      }
+    ]
+  );
+};
 
   const handleLogin = async () => {
     const cleanedEmail = email.trim().toLowerCase();
@@ -126,6 +178,9 @@ export default function LoginScreen() {
           style={styles.input}
         />
 
+
+        
+
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={handleLogin}
@@ -155,9 +210,13 @@ export default function LoginScreen() {
         </View>
         </TouchableOpacity>
 
-
+        <TouchableOpacity onPress={handleResetPassword}>
+        <Text style={styles.forgotPasswordText}>Zapomniałeś hasła?</Text>
+        </TouchableOpacity>
 
         <Text style={styles.or}>Nie masz konta?</Text>
+       
+
 
         <TouchableOpacity
           style={styles.secondaryButton}
@@ -165,6 +224,24 @@ export default function LoginScreen() {
         >
           <Text style={styles.secondaryButtonText}>Zarejestruj się</Text>
         </TouchableOpacity>
+
+
+
+        <Modal isVisible={noAccountModalVisible} onBackdropPress={() => setNoAccountModalVisible(false)}>
+        <View style={styles.modal}>
+          <Text style={styles.modalIcon}>❌</Text>
+          <Text style={styles.modalTitle}>Nie znaleziono konta</Text>
+          <Text style={styles.modalMessage}>Nie istnieje konto powiązane z tym adresem e-mail.</Text>
+
+          <TouchableOpacity style={styles.modalBtn} onPress={() => setNoAccountModalVisible(false)}>
+            <Text style={styles.modalBtnText}>OK</Text>
+          </TouchableOpacity>
+  </View>
+</Modal>
+
+
+
+
       </View>
     </LinearGradient>
   );
@@ -262,5 +339,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'PoppinsBold',
   },
+  forgotPasswordText: {
+  color: '#333',
+  fontSize: 14,
+  fontFamily: 'Poppins',
+  textAlign: 'right',
+  width: '100%',
+  marginTop: -8,
+  marginBottom: 20,
+  textDecorationLine: 'underline',
+},
+modal: {
+  backgroundColor: '#fff',
+  padding: 24,
+  borderRadius: 20,
+  alignItems: 'center',
+},
+modalIcon: {
+  fontSize: 40,
+  marginBottom: 8,
+},
+modalTitle: {
+  fontSize: 20,
+  fontFamily: 'PoppinsBold',
+  color: '#222',
+  marginBottom: 6,
+  textAlign: 'center',
+},
+modalMessage: {
+  fontSize: 16,
+  fontFamily: 'Poppins',
+  color: '#555',
+  textAlign: 'center',
+  marginBottom: 16,
+},
+modalBtn: {
+  backgroundColor: '#F67280',
+  paddingVertical: 10,
+  paddingHorizontal: 24,
+  borderRadius: 10,
+},
+modalBtnText: {
+  color: '#fff',
+  fontFamily: 'PoppinsBold',
+  fontSize: 16,
+},
+
   
 });

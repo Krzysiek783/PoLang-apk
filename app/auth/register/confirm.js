@@ -51,20 +51,33 @@ export default function ConfirmScreen() {
           avatarUrl = uploadedUrl;
         }
 
-        await setDoc(doc(db, 'users', user.uid), {
-          nick: params.nick,
-          email: params.email,
-          motivations: JSON.parse(params.motivations),
-          age: parseInt(params.age),
-          gender: params.gender,
-          level: params.level,
-          notifications: JSON.parse(params.notifications),
-          avatarUri: avatarUrl,
-          createdAt: new Date(),
-          points: 0,
-          verified: false,
-          firstLogin: true,
-        });
+        await Promise.all([
+  setDoc(doc(db, 'users', user.uid), {
+    nick: params.nick,
+    email: params.email,
+    motivations: JSON.parse(params.motivations),
+    age: parseInt(params.age),
+    gender: params.gender,
+    level: params.level,
+    notifications: JSON.parse(params.notifications),
+    avatarUri: avatarUrl,
+    createdAt: new Date(),
+    points: 0,
+    verified: false,
+    firstLogin: true,
+  }),
+
+  setDoc(doc(db, 'userProgress', user.uid), {
+    Stats: {
+      Grammar: 0,
+      Listening: 0,
+      Vocabulary: 0,
+    },
+    Streaks: 0,
+    lastLesson: null,
+    UpdatedAt: new Date(),
+  }),
+]);
 
         setSuccess(true);
       } catch (error) {
