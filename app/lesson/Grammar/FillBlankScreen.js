@@ -18,6 +18,7 @@ export default function FillBlankScreen() {
   const [loading, setLoading] = useState(false);
   const [score, setScore] = useState(0);
   const progress = useRef(new Animated.Value(0)).current;
+  const answerFade = useRef(new Animated.Value(0)).current;
 
   const BASE_URL = API_BASE_URL;
 
@@ -46,6 +47,18 @@ export default function FillBlankScreen() {
       useNativeDriver: false,
     }).start();
   }, [current]);
+
+  useEffect(() => {
+    if (feedback) {
+      Animated.timing(answerFade, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      answerFade.setValue(0);
+    }
+  }, [feedback]);
 
   const playSound = async (type) => {
     const sound = new Audio.Sound();
@@ -83,46 +96,39 @@ export default function FillBlankScreen() {
     }
   };
 
-    const finishLesson = async () => {
-      try {
-        const uid = auth.currentUser.uid;
-        const progressRef = doc(db, 'userProgress', uid);
-    
-        // Pobierz aktualne dane
-        const snap = await getDoc(progressRef);
-        let newStreak = 1;
-    
-        if (snap.exists()) {
-          const data = snap.data();
-          const lastTimestamp = data?.UpdatedAt?.toDate();
-    
-          if (lastTimestamp) {
-            const hoursDiff = dayjs().diff(dayjs(lastTimestamp), 'hour');
-    
-            if (hoursDiff < 24) {
-              // Użytkownik był aktywny w ciągu ostatnich 24h → streak++
-              newStreak = (data.Streaks || 0) + 1;
-            } else {
-              // Przerwa większa niż 24h → streak reset
-              newStreak = 1;
-            }
+  const finishLesson = async () => {
+    try {
+      const uid = auth.currentUser.uid;
+      const progressRef = doc(db, 'userProgress', uid);
+
+      const snap = await getDoc(progressRef);
+      let newStreak = 1;
+
+      if (snap.exists()) {
+        const data = snap.data();
+        const lastTimestamp = data?.UpdatedAt?.toDate();
+
+        if (lastTimestamp) {
+          const hoursDiff = dayjs().diff(dayjs(lastTimestamp), 'hour');
+          if (hoursDiff < 24) {
+            newStreak = (data.Streaks || 0) + 1;
+          } else {
+            newStreak = 1;
           }
         }
-    
-        // Zaktualizuj punkty i progres
-        await updateDoc(doc(db, 'users', uid), {
-          points: increment(score),
-        });
-    
-        await updateDoc(progressRef, {
-          'Stats.Listening': increment(1),
-          UpdatedAt: serverTimestamp(),
-          lastLesson: 'Gramatyka',
-          Streaks: newStreak,
-        });
-    
-     
-    // Przekierowanie
+      }
+
+      await updateDoc(doc(db, 'users', uid), {
+        points: increment(score),
+      });
+
+      await updateDoc(progressRef, {
+        'Stats.Listening': increment(1),
+        UpdatedAt: serverTimestamp(),
+        lastLesson: 'Gramatyka',
+        Streaks: newStreak,
+      });
+
       router.replace({
         pathname: '/lesson/summaryScreen',
         params: {
@@ -175,9 +181,20 @@ export default function FillBlankScreen() {
       </Text>
 
       <View style={styles.questionBox}>
-        <Text style={styles.questionText}>
-          {task.sentence.replace('___', '______')}
-        </Text>
+        {feedback ? (
+          <Animated.Text
+            style={[
+              styles.questionText,
+              { color: '#2e7d32', opacity: answerFade },
+            ]}
+          >
+            {task.sentence.replace('___', task.correctAnswer)}
+          </Animated.Text>
+        ) : (
+          <Text style={styles.questionText}>
+            {task.sentence.replace('___', '______')}
+          </Text>
+        )}
       </View>
 
       {task.options.map((option, i) => {

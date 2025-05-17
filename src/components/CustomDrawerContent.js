@@ -71,13 +71,15 @@ export default function CustomDrawerContent(props) {
 
       {/* PRZYCISK NA DOLE */}
       <View style={styles.logoutContainer}>
-        <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutModal(true)}>
-          <View style={styles.logoutRow}>
-            <Ionicons name="exit-outline" size={20} color="#000" />
-            <Text style={styles.logoutText}>Wyloguj się</Text>
-          </View>
+        <TouchableOpacity
+          onPress={() => setShowLogoutModal(true)}
+          style={styles.drawerLikeButton}
+        >
+          <Ionicons name="exit-outline" size={22} color="#555" style={{ marginRight: 12 }} />
+          <Text style={styles.drawerLikeText}>Wyloguj się</Text>
         </TouchableOpacity>
       </View>
+
 
       {/* MODAL POTWIERDZENIA */}
       <Modal isVisible={showLogoutModal} onBackdropPress={() => setShowLogoutModal(false)}>
@@ -192,4 +194,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  drawerLikeButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 14,
+  paddingHorizontal: 20,
+  backgroundColor: '#FFEFE8',
+},
+drawerLikeText: {
+  fontSize: 16,
+  fontFamily: 'Poppins',
+  color: '#555',
+},
+
 });
