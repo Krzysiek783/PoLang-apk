@@ -8,7 +8,7 @@ import {
   Dimensions, TouchableOpacity
 } from 'react-native';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, increment, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 import axios from 'axios';
 import { API_BASE_URL } from '@env';
@@ -172,6 +172,8 @@ export default function DashboardScreen() {
     }
   };
 
+ 
+
   if (!fontsLoaded || loading || !userData) {
     return (
       <View style={[styles.center, { backgroundColor: '#FFEFE8' }]}> 
@@ -211,7 +213,7 @@ export default function DashboardScreen() {
         <View style={styles.statsCardRow}>
           <View style={styles.statCard}>
             <Text style={styles.statIcon}>🔥</Text>
-            <Text style={styles.statValue}>{userData.streak} dni</Text>
+            <Text style={styles.statValue}>{userData.streak}</Text>
             <Text style={styles.statLabel}>Passa</Text>
           </View>
           <View style={styles.statCard}>
@@ -285,7 +287,7 @@ const styles = StyleSheet.create({
     position: 'absolute', width, height: 300, backgroundColor: '#FFD5A5',
     transform: [{ skewY: '-10deg' }], borderBottomRightRadius: 60,
   },
-  container: { padding: 24, paddingBottom: 40 },
+  container: { padding: 24, paddingBottom: 100 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },
   avatar: { width: 60, height: 60, borderRadius: 30, marginRight: 15, borderWidth: 2, borderColor: '#fff' },

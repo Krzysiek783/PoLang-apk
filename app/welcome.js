@@ -7,7 +7,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { AntDesign, MaterialIcons  } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useGoogleAuth } from '../src/config/googleAuth';
+import { useGoogleRegister } from '../src/config/useGoogleRegister';
 
 
 export default function WelcomeScreen() {
@@ -16,9 +16,9 @@ export default function WelcomeScreen() {
     PoppinsRegular: require('../assets/fonts/Poppins-Regular.ttf'),
   });
 
-
   const router = useRouter();
-  const { request, promptAsync, signInWithGoogle } = useGoogleAuth();
+  const { promptAsync } = useGoogleRegister();
+
 
 
   useEffect(() => {

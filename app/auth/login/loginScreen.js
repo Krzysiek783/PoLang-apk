@@ -15,9 +15,10 @@ import { doc, getDoc, updateDoc, query, collection, where, getDocs } from 'fireb
 import { syncVerificationWithFirestore } from '../../../src/services/syncVerification';
 import { useFonts } from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useGoogleAuth } from '../../../src/config/googleAuth';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import Modal from 'react-native-modal';
+import { useGoogleLogin } from '../../../src/config/useGoogleLogin';
+
 
 
 
@@ -31,7 +32,7 @@ export default function LoginScreen() {
   const [noAccountModalVisible, setNoAccountModalVisible] = useState(false);
 
 
-  const { promptAsync } = useGoogleAuth();
+  const { promptAsync } = useGoogleLogin();
 
 
   const [fontsLoaded] = useFonts({

@@ -2,11 +2,13 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Pressable, Animated, ScrollView
 } from 'react-native';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../../src/config/firebase';
 import { router } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { API_BASE_URL } from '@env';
+import dayjs from 'dayjs';
+
 
 export default function FlashcardsScreen() {
   const [words, setWords] = useState([]);
@@ -80,19 +82,44 @@ export default function FlashcardsScreen() {
   };
 
     const finishLesson = async () => {
-    try {
-      const uid = auth.currentUser.uid;
-
-      // Zwiększamy punkty w kolekcji users
-      const userRef = doc(db, 'users', uid);
-      await updateDoc(userRef, { points: increment(score) });
-
-      // Zwiększamy Vocabulary w kolekcji userProgress
-      const progressRef = doc(db, 'userProgress', uid);
-      await updateDoc(progressRef, {
-        'Stats.Vocabulary': increment(1)
-      });
-
+      try {
+        const uid = auth.currentUser.uid;
+        const progressRef = doc(db, 'userProgress', uid);
+    
+        // Pobierz aktualne dane
+        const snap = await getDoc(progressRef);
+        let newStreak = 1;
+    
+        if (snap.exists()) {
+          const data = snap.data();
+          const lastTimestamp = data?.UpdatedAt?.toDate();
+    
+          if (lastTimestamp) {
+            const hoursDiff = dayjs().diff(dayjs(lastTimestamp), 'hour');
+    
+            if (hoursDiff < 24) {
+              // Użytkownik był aktywny w ciągu ostatnich 24h → streak++
+              newStreak = (data.Streaks || 0) + 1;
+            } else {
+              // Przerwa większa niż 24h → streak reset
+              newStreak = 1;
+            }
+          }
+        }
+    
+        // Zaktualizuj punkty i progres
+        await updateDoc(doc(db, 'users', uid), {
+          points: increment(score),
+        });
+    
+        await updateDoc(progressRef, {
+          'Stats.Listening': increment(1),
+          UpdatedAt: serverTimestamp(),
+          lastLesson: 'Słuchanie',
+          Streaks: newStreak,
+        });
+    
+        // Przekierowanie
       router.replace({
         pathname: '/lesson/summaryScreen',
         params: {

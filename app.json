@@ -8,6 +8,10 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "notification": {
+    "icon": "./assets/logo/logo.png",
+    "color": "#F67280"
+    },
     "splash": {
       "image": "./assets/logo/logo.png",
       "resizeMode": "contain",
@@ -17,7 +21,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.PoLang.app",
+      "package": "com.Polang.app",
        "useNextNotificationsApi": true,
       "permissions": ["RECEIVE_BOOT_COMPLETED"],
       "adaptiveIcon": {
