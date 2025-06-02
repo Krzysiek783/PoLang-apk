@@ -31,7 +31,7 @@ export default function SummaryScreen() {
         </Animated.Text>
 
         <Text style={styles.points}>
-          Zdobyłeś {score} / 10 punktów
+          Zdobyłeś {score} / 20 punktów
         </Text>
 
         <Text style={styles.percentage}>

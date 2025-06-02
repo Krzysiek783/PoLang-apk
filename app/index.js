@@ -16,7 +16,6 @@ export default function SplashScreen() {
   const logoOpacity = useSharedValue(0);
   const textTranslateY = useSharedValue(30);
   const textOpacity = useSharedValue(0);
-
   useEffect(() => {
     // Animacje
     logoOpacity.value = withTiming(1, { duration: 1000, easing: Easing.out(Easing.ease) });

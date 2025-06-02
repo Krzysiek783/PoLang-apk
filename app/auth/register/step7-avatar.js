@@ -15,6 +15,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import ProgressDots from '../../../src/components/ProgressDots';
 import { useFonts } from 'expo-font';
+import { uploadImageToFirebase } from '../../../src/components/uploadAvatar'; // dopasuj ścieżkę
+
 
 const predefinedAvatars = [
   "https://firebasestorage.googleapis.com/v0/b/polang-app.firebasestorage.app/o/avatars%2Favatar1.png?alt=media",
@@ -55,16 +57,29 @@ export default function Step7Avatar() {
     }
   };
 
-  const handleNext = () => {
-    if (!selectedUri) {
-      return Alert.alert("Wybierz avatar", "Musisz wybrać jeden z avatarów lub dodać własny.");
+  const handleNext = async () => {
+  if (!selectedUri) {
+    return Alert.alert("Wybierz avatar", "Musisz wybrać jeden z avatarów lub dodać własny.");
+  }
+
+  let finalUri = selectedUri;
+
+  // Jeśli to NIE jest predefiniowany avatar – uploaduj do Firebase
+  if (!predefinedAvatars.includes(selectedUri)) {
+    try {
+      const userId = params?.userId || 'tempUser'; // Podmień na realne UID jeśli masz
+      finalUri = await uploadImageToFirebase(selectedUri, userId);
+    } catch (error) {
+      console.error("Upload error:", error);
+      return Alert.alert("Błąd", "Nie udało się przesłać avatara.");
     }
+  }
 
     router.push({
       pathname: './confirm',
       params: {
         ...params,
-        avatarUri: selectedUri,
+        avatarUri: finalUri,
       },
     });
   };
@@ -181,3 +196,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PoppinsBold',
   },
 });
+
+
+
+

@@ -113,7 +113,7 @@ export default function FlashcardsScreen() {
         });
     
         await updateDoc(progressRef, {
-          'Stats.Listening': increment(1),
+          'Stats.Vocabulary': increment(1),
           UpdatedAt: serverTimestamp(),
           lastLesson: 'Słuchanie',
           Streaks: newStreak,

@@ -1,15 +1,19 @@
-// ProfileScreen.js
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, Image, ScrollView, Alert, Switch, Modal, Pressable
+  View, Text, StyleSheet, Image, ScrollView, Alert, Switch
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pl';
 dayjs.locale('pl');
+import axios from 'axios';
+import { API_BASE_URL } from '@env';
+
+
 
 export default function ProfileScreen() {
   const [userData, setUserData] = useState(null);
@@ -26,29 +30,54 @@ export default function ProfileScreen() {
     fetchUserProfile();
   }, []);
 
-  const fetchUserProfile = async () => {
-    try {
-      const uid = auth.currentUser.uid;
-      const userRef = doc(firestore, 'users', uid);
-      const docSnap = await getDoc(userRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setUserData(data);
-        setSelectedLevel(data.level || '');
-        setNotificationsEnabled(data.notifications?.enabled ?? false);
-        setNotificationHour(data.notifications?.hour ?? '');
-        if (data.notifications?.hour) {
-          const [h, m] = data.notifications.hour.split(':');
-          const updatedDate = new Date();
-          updatedDate.setHours(Number(h));
-          updatedDate.setMinutes(Number(m));
-          setDate(updatedDate);
-        }
+ const fetchUserProfile = async () => {
+  const user = auth.currentUser;
+
+  if (!user) {
+    console.log('🛑 Użytkownik nie jest zalogowany – nie pobieram danych z leaderbordu.');
+    return;
+  }
+
+  try {
+    const uid = user.uid;
+
+    const res = await axios.get(`${API_BASE_URL}/leaderboard?userId=${uid}`);
+    const currentUser = res.data.currentUser;
+
+    let avatarUri = null;
+    if (currentUser.avatarPath) {
+      try {
+        const storageRef = ref(getStorage(), currentUser.avatarPath);
+        avatarUri = await getDownloadURL(storageRef);
+      } catch (e) {
+        console.warn('⚠️ Błąd pobierania avatara z Firebase Storage:', e.code);
       }
-    } catch (e) {
-      Alert.alert('Błąd', 'Nie udało się pobrać danych profilu.');
     }
-  };
+
+    setUserData({
+      ...currentUser,
+      avatarUri,
+    });
+
+    setSelectedLevel(currentUser.level || '');
+    setNotificationsEnabled(currentUser.notifications?.enabled ?? false);
+    setNotificationHour(currentUser.notifications?.hour ?? '');
+
+    if (currentUser.notifications?.hour) {
+      const [h, m] = currentUser.notifications.hour.split(':');
+      const updatedDate = new Date();
+      updatedDate.setHours(Number(h));
+      updatedDate.setMinutes(Number(m));
+      setDate(updatedDate);
+    }
+  } catch (e) {
+    console.error('❌ Błąd w fetchUserProfile:', e);
+    Alert.alert('Błąd', 'Nie udało się pobrać danych profilu.');
+  }
+};
+
+
+
 
   const handleLevelChange = async (newLevel) => {
     try {
@@ -102,8 +131,13 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Image source={{ uri: userData.avatarUri }} style={styles.avatar} />
+      {userData.avatarUri ? (
+        <Image source={{ uri: userData.avatarUri }} style={styles.avatar} />
+      ) : (
+        <View style={[styles.avatar, { backgroundColor: '#ccc' }]} />
+      )}
       <Text style={styles.nick}>{userData.nick}</Text>
+
       <Text style={styles.label}>Email:</Text>
       <Text style={styles.value}>{userData.email}</Text>
 
@@ -170,7 +204,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 24,
-    backgroundColor: '#FFF9F5'
+    backgroundColor: '#FFF9F5',
   },
   avatar: {
     width: 100,
@@ -188,15 +222,15 @@ const styles = StyleSheet.create({
   label: {
     fontWeight: 'bold',
     marginTop: 16,
-    color: '#333'
+    color: '#333',
   },
   value: {
     fontSize: 14,
-    color: '#555'
+    color: '#555',
   },
   picker: {
     marginTop: 8,
     marginBottom: 16,
     backgroundColor: '#fff0e6',
-  }
+  },
 });

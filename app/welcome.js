@@ -7,7 +7,6 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { AntDesign, MaterialIcons  } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useGoogleRegister } from '../src/config/useGoogleRegister';
 
 
 export default function WelcomeScreen() {
@@ -17,7 +16,6 @@ export default function WelcomeScreen() {
   });
 
   const router = useRouter();
-  const { promptAsync } = useGoogleRegister();
 
 
 
@@ -66,24 +64,7 @@ export default function WelcomeScreen() {
         </Link>
 
 
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={() => {
-              promptAsync();
-            }}
-            activeOpacity={0.8}
-          >
-            <View style={styles.googleContent}>
-              <View style={styles.googleIconWrapper}>
-                <Image
-                  source={require('../assets/logo/google-logo1.png')} 
-                  style={styles.googleIcon}
-                  resizeMode="contain"
-                />
-              </View>
-              <Text style={styles.googleButtonText}>Rozpocznij z Google</Text>
-            </View>
-          </TouchableOpacity>
+          
 
         <Text style={styles.or}>Lub</Text>
 
@@ -176,38 +157,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'PoppinsRegular',
     color: '#444',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    
-  },
-  googleContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  googleIconWrapper: {
-    backgroundColor: '#fff',
-    padding: 4,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  googleIcon: {
-    width: 24,
-    height: 24,
-  },
-  googleButtonText: {
-    color: '#000',
-    fontSize: 16,
-    fontFamily: 'PoppinsBold',
-  },
+  }
   
 });

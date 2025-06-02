@@ -7,9 +7,13 @@ const { width } = Dimensions.get('window');
 export default function OnboardingScreen() {
   const router = useRouter();
 
-  const handleStart = () => {
-    router.replace('./home/(tabs)/index');
-  };
+ const handleStart = () => {
+  try {
+    router.replace('/home');
+  } catch (e) {
+    console.error('❌ Błąd przejścia do zakładek:', e);
+  }
+};
 
   return (
     <LinearGradient

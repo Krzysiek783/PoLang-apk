@@ -7,39 +7,54 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import Modal from 'react-native-modal';
 import { useNavigation } from '@react-navigation/native';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 
 export default function CustomDrawerContent(props) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const { logout, user } = useAuth(); // pobieramy user z kontekstu
+  const { logout, user } = useAuth();
   const navigation = useNavigation();
 
   useEffect(() => {
-    if (!user) {
-      console.log('🛑 Użytkownik nie jest zalogowany – nie pobieram danych z Firestore.');
-      setLoading(false);
-      return;
-    }
+  if (!user) {
+    console.log('🛑 Użytkownik nie jest zalogowany – nie pobieram danych z leaderbordu.');
+    setLoading(false);
+    return;
+  }
 
-    const fetchUserData = async () => {
-      try {
-        const res = await axios.get(`${API_BASE_URL}/leaderboard?userId=${user.uid}`);
-        if (res.data.currentUser) {
-          setUserData({
-            ...res.data.currentUser,
-            avatarUri: res.data.currentUser.avatarPath ? res.data.currentUser.avatarPath : null
-          });
+  const fetchUserData = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/leaderboard?userId=${user.uid}`);
+      const currentUser = res.data.currentUser;
+
+      let avatarUri = null;
+
+      if (currentUser.avatarPath) {
+        try {
+          const storageRef = ref(getStorage(), currentUser.avatarPath);
+          avatarUri = await getDownloadURL(storageRef);
+          console.log('✅ Drawer avatar URI:', avatarUri);
+        } catch (error) {
+          console.warn('⚠️ Błąd pobierania avatara z Firebase Storage:', error.code);
         }
-      } catch (err) {
-        console.warn('❌ Drawer - error fetching user from leaderboard:', err);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchUserData();
-  }, [user]);
+      setUserData({
+        nick: currentUser.nick,
+        level: currentUser.level,
+        avatarUri,
+      });
+    } catch (err) {
+      console.warn('❌ Drawer - error fetching user from leaderboard:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchUserData();
+}, [user]);
+
 
   const handleLogout = async () => {
     setShowLogoutModal(false);
@@ -69,25 +84,18 @@ export default function CustomDrawerContent(props) {
         <DrawerItemList {...props} />
       </View>
 
-      {/* PRZYCISK NA DOLE */}
       <View style={styles.logoutContainer}>
-        <TouchableOpacity
-          onPress={() => setShowLogoutModal(true)}
-          style={styles.drawerLikeButton}
-        >
+        <TouchableOpacity onPress={() => setShowLogoutModal(true)} style={styles.drawerLikeButton}>
           <Ionicons name="exit-outline" size={22} color="#555" style={{ marginRight: 12 }} />
           <Text style={styles.drawerLikeText}>Wyloguj się</Text>
         </TouchableOpacity>
       </View>
 
-
-      {/* MODAL POTWIERDZENIA */}
       <Modal isVisible={showLogoutModal} onBackdropPress={() => setShowLogoutModal(false)}>
         <View style={styles.modal}>
           <Text style={styles.modalIcon}>🚪</Text>
           <Text style={styles.modalTitle}>Wylogować się?</Text>
           <Text style={styles.modalMessage}>Czy na pewno chcesz się wylogować z aplikacji?</Text>
-
           <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowLogoutModal(false)}>
               <Text style={styles.cancelText}>Anuluj</Text>
@@ -133,19 +141,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
-  logoutButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  logoutRow: {
+  drawerLikeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFEFE8',
   },
-  logoutText: {
+  drawerLikeText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#000',
+    fontFamily: 'Poppins',
+    color: '#555',
   },
   modal: {
     backgroundColor: '#fff',
@@ -194,17 +200,4 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  drawerLikeButton: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingVertical: 14,
-  paddingHorizontal: 20,
-  backgroundColor: '#FFEFE8',
-},
-drawerLikeText: {
-  fontSize: 16,
-  fontFamily: 'Poppins',
-  color: '#555',
-},
-
 });

@@ -123,7 +123,7 @@ export default function FillBlankScreen() {
       });
 
       await updateDoc(progressRef, {
-        'Stats.Listening': increment(1),
+        'Stats.Grammar': increment(1),
         UpdatedAt: serverTimestamp(),
         lastLesson: 'Gramatyka',
         Streaks: newStreak,
